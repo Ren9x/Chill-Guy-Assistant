@@ -1,3 +1,3 @@
 # Chill-Guy-Assistant
 
-My simple automated malicious website activiy
+My simple automated malicious website activity
