@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
 import pandas as pd
 import os
 import requests
@@ -46,30 +46,23 @@ def check_virustotal(address):
         'Status': status
     }
 
-# Fungsi untuk membaca file dengan handling error
+# Fungsi untuk membaca file
 def read_file(filepath):
     try:
         if not os.path.exists(filepath):
             messagebox.showerror("Error", "File tidak ditemukan.")
             return None
 
-        if filepath.endswith(".csv"):
-            df = pd.read_csv(filepath, on_bad_lines='skip', sep=None, engine='python')
-        else:
-            messagebox.showerror("Error", "Format file tidak didukung. Harap unggah file CSV.")
-            return None
-
+        df = pd.read_csv(filepath, on_bad_lines='skip', sep=None, engine='python')
+        
         if df.empty:
             messagebox.showerror("Error", "File kosong atau tidak memiliki data yang valid.")
             return None
 
         messagebox.showinfo("File Loaded", "File berhasil dimuat!")
         return df
-    except pd.errors.ParserError as e:
-        messagebox.showerror("Error", f"Terjadi kesalahan dalam membaca file: {str(e)}")
-        return None
     except Exception as e:
-        messagebox.showerror("Error", f"Kesalahan umum: {str(e)}")
+        messagebox.showerror("Error", f"Kesalahan saat membaca file: {str(e)}")
         return None
 
 # Fungsi untuk upload file
@@ -85,43 +78,49 @@ def upload_file():
 # Fungsi untuk memproses data
 def process_data(df):
     results = []
-    for index, row in df.iterrows():
-        address = row.get('Remote Host', '')
-        if not isinstance(address, str) or not is_valid_domain(address):
-            continue
-
+    domains = df['Remote Host'].dropna().astype(str).tolist()
+    valid_domains = [d for d in domains if is_valid_domain(d)]
+    
+    total_domains = len(valid_domains)
+    if total_domains == 0:
+        messagebox.showwarning("Warning", "Tidak ada domain valid untuk diproses.")
+        return
+    
+    progress_bar['maximum'] = total_domains
+    
+    for index, address in enumerate(valid_domains, start=1):
         vt_data = check_virustotal(address)
-        if not vt_data:
-            continue
-
-        results.append({
-            'Address': address,
-            'Country': vt_data['Country'],
-            'Owner': vt_data['Owner'],
-            'Malicious': vt_data['Malicious'],
-            'Suspicious': vt_data['Suspicious'],
-            'Total': vt_data['Total'],
-            'Scan Time': vt_data['Scan Time'],
-            'Status': vt_data['Status']
-        })
-
+        if vt_data:
+            results.append({
+                'Address': address,
+                'Country': vt_data['Country'],
+                'Owner': vt_data['Owner'],
+                'Malicious': vt_data['Malicious'],
+                'Suspicious': vt_data['Suspicious'],
+                'Total': vt_data['Total'],
+                'Scan Time': vt_data['Scan Time'],
+                'Status': vt_data['Status']
+            })
+        
+        progress_bar['value'] = index
+        progress_label.config(text=f"Scanning: {index}/{total_domains} domains")
+        root.update_idletasks()
+    
     if results:
         result_df = pd.DataFrame(results)
         result_df.to_csv("scan_results.csv", index=False)
         messagebox.showinfo("Scan Selesai", "Hasil scan tersimpan dalam 'scan_results.csv'")
-
+    
 # Buat GUI
 root = tk.Tk()
 root.title("Chill-guy assistant")
-root.geometry("500x300")
+root.geometry("500x350")
 
 # Load gambar
 try:
-    image = Image.open("chillguy.jpg")  # Ganti dengan path gambar yang dipakai
-    image = image.resize((100, 100))  # Atur ukuran
+    image = Image.open("chillguy.jpg")
+    image = image.resize((100, 100))
     photo = ImageTk.PhotoImage(image)
-
-    # Tampilkan di UI
     img_label = tk.Label(root, image=photo)
     img_label.pack(pady=10)
 except Exception as e:
@@ -131,6 +130,12 @@ label = tk.Label(root, text="Chill-guy assistant", font=("Arial", 14))
 label.pack(pady=10)
 
 upload_button = tk.Button(root, text="Upload File (CSV saja)", command=upload_file)
-upload_button.pack(pady=20)
+upload_button.pack(pady=10)
+
+progress_label = tk.Label(root, text="", font=("Arial", 10))
+progress_label.pack(pady=5)
+
+progress_bar = ttk.Progressbar(root, length=400, mode='determinate')
+progress_bar.pack(pady=10)
 
 root.mainloop()
