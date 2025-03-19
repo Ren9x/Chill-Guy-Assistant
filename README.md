@@ -17,6 +17,7 @@
     ⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣶⣶⣶⣾⣿⣿
 
     v0.4
+    Made by Hyoka 
 
 ## Documentation
 ### Setup
@@ -41,4 +42,5 @@ Example:
 
 Congratulations! Your domains are being automatically scanned for malicious activity using VirusTotal. Please wait while the program completes scanning all domains in the CSV file.
 
-    Made by Hyoka 
+
+
